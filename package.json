@@ -1,0 +1,78 @@
+{
+  "name": "@billkit-eu/react",
+  "version": "0.1.0",
+  "description": "React bindings for BillKit's embedded checkout: <BillKitProvider> + <CheckoutElement/>, @stripe/react-stripe-js-shaped and SSR-safe.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "prepublishOnly": "npm run build && npm run test && npm run typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "billkit",
+    "react",
+    "checkout",
+    "payment-element",
+    "embedded",
+    "mollie",
+    "stripe"
+  ],
+  "author": "BillKit",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/billkit-eu/billkit-react.git"
+  },
+  "homepage": "https://github.com/billkit-eu/billkit-react#readme",
+  "bugs": {
+    "url": "https://github.com/billkit-eu/billkit-react/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "peerDependencies": {
+    "@billkit-eu/js": "^0.1.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@billkit-eu/js": "^0.1.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^26.1.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.64.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^10.7.0",
+    "jsdom": "^25.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "sideEffects": false
+}
