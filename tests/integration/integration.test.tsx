@@ -86,7 +86,7 @@ d("@billkit-eu/react against a live API", () => {
 
   scenario("element.mount", "mounts the iframe without ever putting the secret in the URL", () => {
     const { container } = render(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <CheckoutElement clientSecret={session.clientSecret} />
       </BillKitProvider>,
     );
@@ -96,7 +96,7 @@ d("@billkit-eu/react against a live API", () => {
     expect(iframe.src).not.toContain("_secret_");
 
     const wallet = render(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <PaymentMethodElement clientSecret={session.clientSecret} customerId="cus_x" />
       </BillKitProvider>,
     );
@@ -108,7 +108,7 @@ d("@billkit-eu/react against a live API", () => {
     "posts init only after ready, targeted, with the real secret + parsed session id",
     () => {
       const { container } = render(
-        <BillKitProvider publishableKey="pk_test_1">
+        <BillKitProvider>
           <CheckoutElement clientSecret={session.clientSecret} theme={{ colorPrimary: "#111" }} />
         </BillKitProvider>,
       );
@@ -135,7 +135,7 @@ d("@billkit-eu/react against a live API", () => {
     const onError = vi.fn();
     const onSuccess = vi.fn();
     const { container } = render(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <CheckoutElement
           clientSecret={session.clientSecret}
           onError={onError}
@@ -165,7 +165,6 @@ d("@billkit-eu/react against a live API", () => {
       // This is the seam a self-hosted or vanity-domain tenant depends on.
       const { container } = render(
         <BillKitProvider
-          publishableKey="pk_test_1"
           iframeOrigin="https://pay.acme.com"
           apiBase="https://api.acme.com"
         >
@@ -202,7 +201,7 @@ d("@billkit-eu/react against a live API", () => {
     async () => {
       const own = await createEmbeddedSession(tenant);
       render(
-        <BillKitProvider publishableKey="pk_test_1">
+        <BillKitProvider>
           <CheckoutElement clientSecret={own.clientSecret} />
         </BillKitProvider>,
       );
@@ -226,7 +225,7 @@ d("@billkit-eu/react against a live API", () => {
   scenario("element.teardown", "unmount removes the iframe and stops routing", () => {
     const onSuccess = vi.fn();
     const { container, unmount } = render(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <CheckoutElement clientSecret={session.clientSecret} onSuccess={onSuccess} />
       </BillKitProvider>,
     );
@@ -249,7 +248,7 @@ d("@billkit-eu/react against a live API", () => {
     function Harness() {
       const [n, setN] = useState(0);
       return (
-        <BillKitProvider publishableKey="pk_test_1">
+        <BillKitProvider>
           <button type="button" onClick={() => setN(n + 1)}>
             bump {n}
           </button>
@@ -273,14 +272,14 @@ d("@billkit-eu/react against a live API", () => {
   it("remounts when the clientSecret changes", async () => {
     const other = await createEmbeddedSession(tenant);
     const { container, rerender } = render(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <CheckoutElement clientSecret={session.clientSecret} />
       </BillKitProvider>,
     );
     const first = iframeIn(container);
 
     rerender(
-      <BillKitProvider publishableKey="pk_test_1">
+      <BillKitProvider>
         <CheckoutElement clientSecret={other.clientSecret} />
       </BillKitProvider>,
     );

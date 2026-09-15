@@ -16,10 +16,12 @@ package's changelog.
 First public release.
 
 ### Added
-- `<BillKitProvider>`: holds the publishable key and shared element
-  configuration for the tree below it, so individual elements take only the
-  props that vary. Shaped after `@stripe/react-stripe-js` `<Elements>`, which
-  is the API most teams are migrating from.
+- `<BillKitProvider>`: holds the shared element configuration (origin
+  overrides, logger) for the tree below it, so individual elements take only
+  the props that vary. Shaped after `@stripe/react-stripe-js` `<Elements>`,
+  which is the API most teams are migrating from — but with **no
+  `publishableKey`**: BillKit has no publishable-key concept, and elements
+  authenticate with the session's ephemeral `client_secret` instead.
 - `<CheckoutElement/>` and `<PaymentMethodElement/>`: React wrappers over the
   corresponding `@billkit-eu/js` mounts, with the iframe's lifecycle tied to
   the component's.

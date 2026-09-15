@@ -20,7 +20,11 @@ export {
   PaymentMethodElement,
   type PaymentMethodElementProps,
 } from "./PaymentMethodElement";
-export type { ReactElementProps } from "./useElement";
+export type {
+  BillKitElementRef,
+  ReactElementProps,
+  ThemeableElementRef,
+} from "./useElement";
 // Re-export the loader's shared types so consumers import from one place.
 export type {
   BillKitElementError,

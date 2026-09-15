@@ -67,7 +67,7 @@ Both components are SSR-safe. They render `null` on the server and on the first 
 | `onReady` | `() => void` | The iframe booted and loaded the session. |
 | `onChange` | `(e: ChangeEvent) => void` | `e.complete` drives an external pay button. |
 | `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. |
-| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. |
+| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Codes: `payment_declined`, `load_timeout`, `unsafe_redirect`. |
 | `onRedirect` | `(url: string) => boolean \| void` | Before the top window navigates for 3DS or iDEAL. Return `false` to navigate yourself. |
 
 `<PaymentMethodElement/>` also requires `customerId`.
@@ -78,7 +78,47 @@ Both components are SSR-safe. They render `null` on the server and on the first 
 
 Pass inline arrow functions freely. Callbacks are read through a ref at event time, so a fresh closure on every render does not tear down a live payment iframe. The same holds for `logger`: an inline `logger={{...}}`, or switching one on mid-session, never triggers a remount.
 
-Only `clientSecret`, `locale` and the origin overrides remount the element. That is deliberate, because a remount destroys an in-progress payment.
+Only `clientSecret`, `customerId`, `locale` and the origin overrides remount the element. That is deliberate, because a remount destroys an in-progress payment — but `customerId` has to be in that list: the wallet's "set default" and "remove" actions act on whichever customer the iframe was initialised with, so a stale frame would point them at the wrong person.
+
+## Your own pay button
+
+Take a `ref` and call `submit()`. Gate the button on `onChange`'s `complete`, and re-enable it from `onError` — a declined card fires `onError({ code: "payment_declined" })` while the element shows its own retry panel, so it is the only signal that the attempt is over.
+
+```tsx
+import { useRef, useState } from "react";
+import { BillKitProvider, CheckoutElement, type BillKitElementRef } from "@billkit-eu/react";
+
+function Checkout({ clientSecret }: { clientSecret: string }) {
+  const element = useRef<BillKitElementRef>(null);
+  const [complete, setComplete] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <BillKitProvider>
+      <CheckoutElement
+        ref={element}
+        clientSecret={clientSecret}
+        onChange={({ complete }) => setComplete(complete)}
+        onError={() => setSubmitting(false)}
+        onSuccess={({ sessionId }) => router.push(`/thanks?cs=${sessionId}`)}
+      />
+      <button
+        disabled={!complete || submitting}
+        onClick={() => {
+          setSubmitting(true);
+          element.current?.submit();
+        }}
+      >
+        Pay
+      </button>
+    </BillKitProvider>
+  );
+}
+```
+
+The ref also exposes `updateTheme(tokens)` for imperative restyling; the declarative `theme` prop is hot-applied without a remount and is usually what you want.
+
+`<PaymentMethodElement/>`'s ref exposes `updateTheme()` only — that element has no form to submit; its actions are per-row buttons inside the iframe.
 
 ## Content Security Policy
 
@@ -104,7 +144,7 @@ Never logged: the `clientSecret`, message payloads, or full redirect URLs. Only 
 
 The shapes line up, with one difference worth calling out.
 
-`publishableKey` on `<BillKitProvider>` is **deprecated, optional and ignored**. BillKit has no publishable-key concept; the API only mints secret keys, which must never reach a browser. The prop was required in 0.1.0 by analogy with Stripe, but nothing ever read it. Pass nothing. It will be removed in the next major.
+There is **no `publishableKey`**. BillKit has no publishable-key concept; the API only mints secret keys (`sk_live_...` / `sk_test_...`), which must never reach a browser. Elements authenticate with the ephemeral `client_secret` your server gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"` — `<BillKitProvider>` takes no credential at all.
 
 See the [migration guide](https://docs.billkit.eu/migration/elements/) for the full comparison.
 
@@ -118,6 +158,8 @@ import type {
   ChangeEvent,
   SuccessEvent,
   BillKitElementError,
+  BillKitElementRef, // the imperative handle: { submit, updateTheme }
+  ThemeableElementRef, // <PaymentMethodElement/>'s: { updateTheme }
 } from "@billkit-eu/react";
 ```
 

@@ -52,8 +52,17 @@ type MountFn = (
  */
 export function useElement(
   mount: MountFn,
-  props: ReactElementProps,
-): { isClient: boolean; containerRef: React.RefObject<HTMLDivElement> } {
+  // `customerId` is not part of the public `ReactElementProps` (only the
+  // payment-method element has one), but the hook still has to *see* it:
+  // it is a remount input, and leaving it out of the dependency list
+  // meant switching customers kept the previous customer's wallet — and
+  // its "set default" / "remove" actions — on screen.
+  props: ReactElementProps & { customerId?: string },
+): {
+  isClient: boolean;
+  containerRef: React.RefObject<HTMLDivElement>;
+  handleRef: React.RefObject<BillKitElementHandle | null>;
+} {
   const { iframeOrigin, apiBase, logger: providerLogger } = useBillKit();
   const [isClient, setIsClient] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,10 +110,10 @@ export function useElement(
       handle.destroy();
       handleRef.current = null;
     };
-    // Remount only on identity inputs (secret / origins); callbacks are
-    // read through a ref and theme is hot-applied in the effect below, so
-    // neither belongs in this dependency list.
-  }, [isClient, props.clientSecret, props.locale, iframeOrigin, apiBase]);
+    // Remount only on identity inputs (secret / customer / origins);
+    // callbacks are read through a ref and theme is hot-applied in the
+    // effect below, so neither belongs in this dependency list.
+  }, [isClient, props.clientSecret, props.customerId, props.locale, iframeOrigin, apiBase]);
 
   // Hot-apply theme changes without tearing down the iframe.
   useEffect(() => {
@@ -113,5 +122,57 @@ export function useElement(
     }
   }, [themeKey]);
 
-  return { isClient, containerRef };
+  return { isClient, containerRef, handleRef };
+}
+
+/**
+ * The imperative handle `<CheckoutElement/>` and
+ * `<PaymentMethodElement/>` expose through `ref`.
+ *
+ * Everything else about these components is declarative, but submitting
+ * is genuinely an *event*, not a state: a merchant's own pay button
+ * lives outside the iframe (that is the point of `onChange.complete`),
+ * and it has to be able to say "go" exactly once. A `submit` prop would
+ * have to be a toggling boolean, which is the classic React smell for an
+ * action modelled as state, so this follows the
+ * `useImperativeHandle` path that `<input>`'s `focus()` set.
+ *
+ * Calls made before the iframe has mounted are no-ops rather than
+ * throwing — on the server, and on the first client render, there is no
+ * element yet.
+ */
+export interface ThemeableElementRef {
+  /** Push new theme tokens in without remounting. */
+  updateTheme(theme: BillKitThemeTokens): void;
+}
+
+export interface BillKitElementRef extends ThemeableElementRef {
+  /** Submit the form from your own pay button. */
+  submit(): void;
+}
+
+/** Build the ref `<CheckoutElement/>` exposes. */
+export function checkoutElementRef(
+  handleRef: React.RefObject<BillKitElementHandle | null>,
+): BillKitElementRef {
+  return {
+    submit: () => handleRef.current?.submit(),
+    updateTheme: (theme) => handleRef.current?.updateTheme(theme),
+  };
+}
+
+/**
+ * Build the ref `<PaymentMethodElement/>` exposes.
+ *
+ * Deliberately no `submit`: the wallet element drops `billkit:submit` on
+ * the floor (there is no form to submit — its actions are per-row "set
+ * default" / "remove" buttons inside the iframe). Exposing a method that
+ * silently does nothing would be worse than not having one.
+ */
+export function themeableElementRef(
+  handleRef: React.RefObject<BillKitElementHandle | null>,
+): ThemeableElementRef {
+  return {
+    updateTheme: (theme) => handleRef.current?.updateTheme(theme),
+  };
 }
