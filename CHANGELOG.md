@@ -9,7 +9,15 @@ This package is a thin binding layer over `@billkit-eu/js`, which it takes as a
 peer dependency. Behaviour changes usually land there and are recorded in that
 package's changelog.
 
-## [Unreleased]
+## [0.2.1]
+
+### Changed
+- Documentation only. API keys are now `bk_live_…` / `bk_test_…` and webhook
+  signing secrets `bkwhsec_…`; every example here used the previous
+  Stripe-shaped `sk_`/`whsec_` spelling. No code in this package changed: it
+  never parsed the prefix, it forwards the key as a bearer token.
+
+## [0.2.0]
 
 ## [0.1.0]
 

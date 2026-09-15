@@ -144,7 +144,7 @@ Never logged: the `clientSecret`, message payloads, or full redirect URLs. Only 
 
 The shapes line up, with one difference worth calling out.
 
-There is **no `publishableKey`**. BillKit has no publishable-key concept; the API only mints secret keys (`sk_live_...` / `sk_test_...`), which must never reach a browser. Elements authenticate with the ephemeral `client_secret` your server gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"` — `<BillKitProvider>` takes no credential at all.
+There is **no `publishableKey`**. BillKit has no publishable-key concept; the API only mints secret keys (`bk_live_...` / `bk_test_...`), which must never reach a browser. Elements authenticate with the ephemeral `client_secret` your server gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"` — `<BillKitProvider>` takes no credential at all.
 
 See the [migration guide](https://docs.billkit.eu/migration/elements/) for the full comparison.
 

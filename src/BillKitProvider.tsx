@@ -5,7 +5,7 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
  * Config shared by every BillKit element on the page. Mirrors
  * `@stripe/react-stripe-js`'s `<Elements>` provider — minus the key:
  * BillKit has no publishable-key concept. The API only mints secret keys
- * (`sk_live_...` / `sk_test_...`), which must never reach a browser;
+ * (`bk_live_...` / `bk_test_...`), which must never reach a browser;
  * elements authenticate with the ephemeral `client_secret` your server
  * gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"`, and
  * that secret already names the tenant, the mode, and the session. So the
