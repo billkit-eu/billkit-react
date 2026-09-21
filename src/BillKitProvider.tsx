@@ -1,5 +1,5 @@
 import type { BillKitElementLogger } from "@billkit-eu/js";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { createContext, type ReactElement, type ReactNode, useContext, useMemo } from "react";
 
 /**
  * Config shared by every BillKit element on the page. Mirrors
@@ -51,7 +51,7 @@ export function BillKitProvider({
   apiBase,
   logger,
   children,
-}: BillKitProviderProps): JSX.Element {
+}: BillKitProviderProps): ReactElement {
   const value = useMemo<BillKitContextValue>(
     () => ({ iframeOrigin, apiBase, logger }),
     [iframeOrigin, apiBase, logger],

@@ -1,6 +1,6 @@
 {
   "name": "@billkit-eu/react",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "React bindings for BillKit's embedded checkout: <BillKitProvider> + <CheckoutElement/>, @stripe/react-stripe-js-shaped and SSR-safe.",
   "type": "module",
   "main": "./dist/index.cjs",

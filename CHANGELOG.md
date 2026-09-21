@@ -9,6 +9,13 @@ This package is a thin binding layer over `@billkit-eu/js`, which it takes as a
 peer dependency. Behaviour changes usually land there and are recorded in that
 package's changelog.
 
+## [0.2.2] - 2026-09-22
+
+### Fixed
+- `<BillKitProvider>` is typed `ReactElement` rather than the global
+  `JSX.Element`, which React 19's type packages no longer declare.
+- The package doc comment had a half-finished sentence left mid-edit.
+
 ## [0.2.1]
 
 ### Changed

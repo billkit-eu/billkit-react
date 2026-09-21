@@ -67,7 +67,7 @@ Both components are SSR-safe. They render `null` on the server and on the first 
 | `onReady` | `() => void` | The iframe booted and loaded the session. |
 | `onChange` | `(e: ChangeEvent) => void` | `e.complete` drives an external pay button. |
 | `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. |
-| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Codes: `payment_declined`, `load_timeout`, `unsafe_redirect`. |
+| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Codes: `payment_declined`, `element_crashed`, `load_timeout`, `unsafe_redirect`. All four end the attempt. |
 | `onRedirect` | `(url: string) => boolean \| void` | Before the top window navigates for 3DS or iDEAL. Return `false` to navigate yourself. |
 
 `<PaymentMethodElement/>` also requires `customerId`.

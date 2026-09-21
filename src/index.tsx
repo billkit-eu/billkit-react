@@ -1,10 +1,10 @@
 /**
  * `@billkit-eu/react`: React bindings for BillKit's embedded checkout.
  *
- * `@stripe/react-stripe-js`-shaped: wrap your tree in a
- * Wrap your tree in `<BillKitProvider>` and drop in `<CheckoutElement/>`.
- * SSR-safe: the elements render `null` on the server and mount the
- * js.billkit.eu iframe after hydration.
+ * `@stripe/react-stripe-js`-shaped: wrap your tree in
+ * `<BillKitProvider>` and drop in `<CheckoutElement/>`. SSR-safe — the
+ * elements render `null` on the server and mount the js.billkit.eu
+ * iframe after hydration.
  *
  * @packageDocumentation
  */
