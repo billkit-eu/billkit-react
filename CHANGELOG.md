@@ -9,6 +9,36 @@ This package is a thin binding layer over `@billkit-eu/js`, which it takes as a
 peer dependency. Behaviour changes usually land there and are recorded in that
 package's changelog.
 
+## [0.2.3] - 2026-09-23
+
+### Fixed
+- **The package type-checks against React 19 again.**
+  - `useRef<T>(null)` returns `RefObject<T | null>` in React 19 and
+    `RefObject<T>` in React 18. The internal element hook declared the
+    narrower spelling, so building this package's source against React 19
+    failed with:
+
+    ```
+    error TS2322: Type 'RefObject<HTMLDivElement | null>' is not assignable
+                  to type 'RefObject<HTMLDivElement>'.
+    ```
+
+  - The wider spelling is correct under **both**: React 18's `RefObject<T>`
+    already declared `current` as `T | null`, so the two only ever differed in
+    what they admitted.
+  - Nothing in the published `.d.ts` changes — the hook is internal — but
+    `files` ships `src/`, and the peer range has said `react: >=18` since
+    0.1.0.
+
+### Changed
+- **The test matrix installs React 19**, not 18.
+  - 0.2.2 fixed a React 19 type break while the dev dependency pinned
+    `@types/react` to `^18`, so the gate could not have caught that break or
+    this one: a type **removal** is invisible to the older types, and code
+    written against them keeps compiling.
+  - React 19 is the edge the peer range has to keep admitting, and code that
+    passes under its types passes under 18's.
+
 ## [0.2.2] - 2026-09-22
 
 ### Fixed
@@ -55,5 +85,9 @@ First public release.
 - React `>=18` (the peer range; the suite runs against 18), ESM + CJS dual
   package via `tsup`.
 
-[Unreleased]: https://github.com/billkit-eu/billkit-react/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/billkit-eu/billkit-react/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/billkit-eu/billkit-react/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/billkit-eu/billkit-react/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/billkit-eu/billkit-react/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/billkit-eu/billkit-react/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/billkit-eu/billkit-react/releases/tag/v0.1.0

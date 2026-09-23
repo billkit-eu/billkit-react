@@ -60,7 +60,14 @@ export function useElement(
   props: ReactElementProps & { customerId?: string },
 ): {
   isClient: boolean;
-  containerRef: React.RefObject<HTMLDivElement>;
+  // `| null` is not decoration. React 19 changed `useRef<T>(null)` to return
+  // `RefObject<T | null>` rather than `RefObject<T>`, so the narrower spelling
+  // stopped type-checking against the version this package's peer range is
+  // mostly installed alongside. It is also correct under React 18, whose
+  // `RefObject<T>` already declared `current` as `T | null`, so the two
+  // spellings only ever differed in what they admitted, never in what they
+  // held. Same reason `handleRef` below has always carried it.
+  containerRef: React.RefObject<HTMLDivElement | null>;
   handleRef: React.RefObject<BillKitElementHandle | null>;
 } {
   const { iframeOrigin, apiBase, logger: providerLogger } = useBillKit();
