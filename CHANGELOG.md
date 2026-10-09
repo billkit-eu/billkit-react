@@ -9,6 +9,21 @@ This package is a thin binding layer over `@billkit-eu/js`, which it takes as a
 peer dependency. Behaviour changes usually land there and are recorded in that
 package's changelog.
 
+## [0.3.0] - 2026-10-09
+
+### Added
+- `<OneShotPaymentElement/>`, the embedded form for a one-off payment created
+  with `POST /v1/checkout/one_shot` and `ui_mode: "embedded"`. Same props, ref
+  and SSR-safe mounting as `<CheckoutElement/>`; `onSuccess` receives
+  `{ oneShotPaymentId, paymentStatus }`. `OneShotSuccessEvent` and
+  `ElementPropsBase` are exported.
+
+### Changed
+- **The `@billkit-eu/js` peer range is now `>=0.4.0 <1`** (it was `>=0.3.0 <1`),
+  because 0.4.0 is the first release with `mountOneShotPaymentElement`.
+  Upgrade `@billkit-eu/js` together with this package: npm reports a peer
+  conflict against 0.3.x, and nothing else about your integration changes.
+
 ## [0.2.3] - 2026-09-23
 
 ### Fixed

@@ -48,17 +48,42 @@ import { BillKitProvider, PaymentMethodElement } from "@billkit-eu/react";
 </BillKitProvider>;
 ```
 
+## One-off payments
+
+For a single charge with no subscription and no saved mandate, create the
+one-shot on your server with `ui_mode: "embedded"` (and no `method`; the buyer
+picks it), then render its `client_secret`:
+
+```tsx
+import { BillKitProvider, OneShotPaymentElement } from "@billkit-eu/react";
+
+<BillKitProvider>
+  <OneShotPaymentElement
+    clientSecret={clientSecret}
+    onSuccess={({ oneShotPaymentId }) => router.push(`/thanks?p=${oneShotPaymentId}`)}
+    onError={({ code, message }) => toast(message)}
+  />
+</BillKitProvider>;
+```
+
+Same props, ref and remount rules as `<CheckoutElement/>`. `onSuccess` receives
+`{ oneShotPaymentId, paymentStatus }`. A decline is final for one one-shot
+(`onError({ code: "payment_declined" })` and no retry panel): create a new
+one-shot and pass its secret, which remounts the element, to let the buyer try
+again. Redirect methods return the buyer to your `success_url`, and the
+`one_shot_payment.succeeded` webhook is the record of the money.
+
 ## Server rendering
 
-Both components are SSR-safe. They render `null` on the server and on the first client render, then mount the iframe after hydration, so there is no hydration mismatch and no `window` access during render. Next.js App Router, Remix and Astro islands all work without a `dynamic(..., { ssr: false })` wrapper.
+All three components are SSR-safe. They render `null` on the server and on the first client render, then mount the iframe after hydration, so there is no hydration mismatch and no `window` access during render. Next.js App Router, Remix and Astro islands all work without a `dynamic(..., { ssr: false })` wrapper.
 
 ## Props
 
-`<CheckoutElement/>` and `<PaymentMethodElement/>` share these:
+`<CheckoutElement/>`, `<OneShotPaymentElement/>` and `<PaymentMethodElement/>` share these:
 
 | Prop | Type | Notes |
 |---|---|---|
-| `clientSecret` | `string` | Required. From `POST /v1/checkout/sessions` with `ui_mode: "embedded"`. |
+| `clientSecret` | `string` | Required. From `POST /v1/checkout/sessions` (or `POST /v1/checkout/one_shot` for `<OneShotPaymentElement/>`) with `ui_mode: "embedded"`. |
 | `theme` | `BillKitThemeTokens` | Colour, radius, font and spacing tokens. |
 | `locale` | `string` | BCP-47, for example `"nl"`. Defaults to the customer's browser. |
 | `loadTimeoutMs` | `number` | Before `onError({ code: "load_timeout" })`. Default `20000`; `0` disables it. |
@@ -66,7 +91,7 @@ Both components are SSR-safe. They render `null` on the server and on the first 
 | `className` / `style` | | Applied to the container `<div>` the iframe mounts into. |
 | `onReady` | `() => void` | The iframe booted and loaded the session. |
 | `onChange` | `(e: ChangeEvent) => void` | `e.complete` drives an external pay button. |
-| `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. |
+| `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. `OneShotSuccessEvent` (`{ oneShotPaymentId, paymentStatus }`) on `<OneShotPaymentElement/>`. |
 | `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Codes: `payment_declined`, `element_crashed`, `load_timeout`, `unsafe_redirect`. All four end the attempt. |
 | `onRedirect` | `(url: string) => boolean \| void` | Before the top window navigates for 3DS or iDEAL. Return `false` to navigate yourself. |
 
@@ -157,6 +182,7 @@ import type {
   BillKitThemeTokens,
   ChangeEvent,
   SuccessEvent,
+  OneShotSuccessEvent, // <OneShotPaymentElement/>'s onSuccess payload
   BillKitElementError,
   BillKitElementRef, // the imperative handle: { submit, updateTheme }
   ThemeableElementRef, // <PaymentMethodElement/>'s: { updateTheme }

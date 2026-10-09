@@ -10,8 +10,12 @@ import type {
 import { useEffect, useRef, useState } from "react";
 import { useBillKit } from "./BillKitProvider";
 
-/** Callback + presentational props common to the React element components. */
-export interface ReactElementProps {
+/**
+ * Callback + presentational props common to the React element components,
+ * generic over what `onSuccess` receives: the checkout element reports a
+ * `sessionId`, the one-shot element a `oneShotPaymentId`.
+ */
+export interface ElementPropsBase<S> {
   /** Ephemeral checkout `client_secret` (`<sessionId>_secret_...`). */
   clientSecret: string;
   theme?: BillKitThemeTokens;
@@ -28,15 +32,20 @@ export interface ReactElementProps {
   style?: React.CSSProperties;
   onReady?: () => void;
   onChange?: (event: ChangeEvent) => void;
-  onSuccess?: (event: SuccessEvent) => void;
+  onSuccess?: (event: S) => void;
   onError?: (error: BillKitElementError) => void;
   onRedirect?: (url: string) => boolean | void;
 }
 
-type MountFn = (
-  target: HTMLElement,
-  options: BaseElementOptions,
-) => BillKitElementHandle;
+/** Props of the checkout and payment-method elements. */
+export type ReactElementProps = ElementPropsBase<SuccessEvent>;
+
+/** The loader options a mount function takes, with `onSuccess` typed by `S`. */
+export type ElementMountOptions<S> = Omit<BaseElementOptions, "onSuccess"> & {
+  onSuccess?: (event: S) => void;
+};
+
+type MountFn<S> = (target: HTMLElement, options: ElementMountOptions<S>) => BillKitElementHandle;
 
 /**
  * SSR-safe mount hook shared by `<CheckoutElement/>` and
@@ -50,14 +59,14 @@ type MountFn = (
  *   every render never forces a costly iframe remount. Only the identity
  *   inputs (secret, origins) remount; theme changes hot-update in place.
  */
-export function useElement(
-  mount: MountFn,
+export function useElement<S = SuccessEvent>(
+  mount: MountFn<S>,
   // `customerId` is not part of the public `ReactElementProps` (only the
   // payment-method element has one), but the hook still has to *see* it:
   // it is a remount input, and leaving it out of the dependency list
   // meant switching customers kept the previous customer's wallet — and
   // its "set default" / "remove" actions — on screen.
-  props: ReactElementProps & { customerId?: string },
+  props: ElementPropsBase<S> & { customerId?: string },
 ): {
   isClient: boolean;
   // `| null` is not decoration. React 19 changed `useRef<T>(null)` to return
@@ -97,7 +106,7 @@ export function useElement(
 
   useEffect(() => {
     if (!isClient || containerRef.current === null) return;
-    const options: BaseElementOptions = {
+    const options: ElementMountOptions<S> = {
       clientSecret: props.clientSecret,
       ...(props.theme ? { theme: props.theme } : {}),
       ...(props.locale ? { locale: props.locale } : {}),

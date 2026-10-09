@@ -2,7 +2,8 @@
  * `@billkit-eu/react`: React bindings for BillKit's embedded checkout.
  *
  * `@stripe/react-stripe-js`-shaped: wrap your tree in
- * `<BillKitProvider>` and drop in `<CheckoutElement/>`. SSR-safe — the
+ * `<BillKitProvider>` and drop in `<CheckoutElement/>` (or
+ * `<OneShotPaymentElement/>` for a one-off payment). SSR-safe: the
  * elements render `null` on the server and mount the js.billkit.eu
  * iframe after hydration.
  *
@@ -17,11 +18,16 @@ export {
 } from "./BillKitProvider";
 export { CheckoutElement, type CheckoutElementProps } from "./CheckoutElement";
 export {
+  OneShotPaymentElement,
+  type OneShotPaymentElementProps,
+} from "./OneShotPaymentElement";
+export {
   PaymentMethodElement,
   type PaymentMethodElementProps,
 } from "./PaymentMethodElement";
 export type {
   BillKitElementRef,
+  ElementPropsBase,
   ReactElementProps,
   ThemeableElementRef,
 } from "./useElement";
@@ -33,5 +39,6 @@ export type {
   BillKitThemeTokens,
   ChangeEvent,
   ElementLogContext,
+  OneShotSuccessEvent,
   SuccessEvent,
 } from "@billkit-eu/js";

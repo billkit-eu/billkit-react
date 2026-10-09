@@ -3,6 +3,7 @@ import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BillKitProvider } from "../src/BillKitProvider";
 import { CheckoutElement } from "../src/CheckoutElement";
+import { OneShotPaymentElement } from "../src/OneShotPaymentElement";
 import { PaymentMethodElement } from "../src/PaymentMethodElement";
 import type { BillKitElementRef } from "../src/useElement";
 
@@ -67,7 +68,19 @@ describe("CheckoutElement", () => {
     const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
 
     expect(ref.current).not.toBeNull();
+    // Since @billkit-eu/js 0.3.0 a submit before the ready handshake is
+    // queued, not posted into a frame with no listener yet, and flushed
+    // with `init` once the element announces ready.
     ref.current?.submit();
+    expect(post).not.toHaveBeenCalledWith({ type: "billkit:submit" }, expect.anything());
+
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "billkit:ready" },
+        origin: "https://js.billkit.eu",
+        source: el?.contentWindow,
+      }),
+    );
 
     expect(post).toHaveBeenCalledWith({ type: "billkit:submit" }, "https://js.billkit.eu");
   });
@@ -159,5 +172,54 @@ describe("PaymentMethodElement", () => {
     );
 
     expect(iframe(container)).toBe(first);
+  });
+});
+
+describe("OneShotPaymentElement", () => {
+  it("mounts the one-shot kind on the element page with its own title", () => {
+    const { container } = render(
+      <BillKitProvider>
+        <OneShotPaymentElement clientSecret="osp_test_x_secret_y" />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    expect(el?.src).toBe("https://js.billkit.eu/embed");
+    expect(el?.getAttribute("data-billkit-element")).toBe("one-shot");
+    expect(el?.title).toBe("BillKit secure payment");
+  });
+
+  it("hands onSuccess the one-shot id, read through the latest callback", () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const { container, rerender } = render(
+      <BillKitProvider>
+        <OneShotPaymentElement clientSecret="osp_test_x_secret_y" onSuccess={first} />
+      </BillKitProvider>,
+    );
+    rerender(
+      <BillKitProvider>
+        <OneShotPaymentElement clientSecret="osp_test_x_secret_y" onSuccess={latest} />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "billkit:success", sessionId: "osp_test_x", paymentStatus: "paid" },
+        origin: "https://js.billkit.eu",
+        source: el?.contentWindow ?? null,
+      }),
+    );
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledWith({ oneShotPaymentId: "osp_test_x", paymentStatus: "paid" });
+  });
+
+  it("exposes submit() through a ref", () => {
+    const ref = createRef<BillKitElementRef>();
+    render(
+      <BillKitProvider>
+        <OneShotPaymentElement ref={ref} clientSecret="osp_test_x_secret_y" />
+      </BillKitProvider>,
+    );
+    expect(typeof ref.current?.submit).toBe("function");
   });
 });
