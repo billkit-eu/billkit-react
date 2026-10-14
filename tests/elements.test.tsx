@@ -1,11 +1,11 @@
-import { render } from "@testing-library/react";
-import { createRef } from "react";
+import { act, render } from "@testing-library/react";
+import { createRef, startTransition, Suspense } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BillKitProvider } from "../src/BillKitProvider";
 import { CheckoutElement } from "../src/CheckoutElement";
 import { OneShotPaymentElement } from "../src/OneShotPaymentElement";
 import { PaymentMethodElement } from "../src/PaymentMethodElement";
-import type { BillKitElementRef } from "../src/useElement";
+import type { BillKitElementRef, ThemeableElementRef } from "../src/useElement";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -36,6 +36,26 @@ describe("CheckoutElement", () => {
     expect(el).not.toBeNull();
     expect(el?.src).toBe("https://js.billkit.eu/embed");
   });
+
+  it.each(["", "   "])(
+    "renders nothing for the clientSecret %j, then mounts when a real one arrives",
+    (blank) => {
+      // The page that renders the element while its secret is still being
+      // fetched: mounting would throw out of an effect and take it down.
+      const { container, rerender } = render(
+        <BillKitProvider>
+          <CheckoutElement clientSecret={blank} />
+        </BillKitProvider>,
+      );
+      expect(container.innerHTML).toBe("");
+      rerender(
+        <BillKitProvider>
+          <CheckoutElement clientSecret="bkcs_test_x" />
+        </BillKitProvider>,
+      );
+      expect(iframe(container)?.src).toBe("https://js.billkit.eu/embed");
+    },
+  );
 
   it("forwards the provider's iframeOrigin (custom-domain seam)", () => {
     const { container } = render(
@@ -124,7 +144,7 @@ describe("PaymentMethodElement", () => {
   });
 
   it("remounts when customerId changes, so it never shows the previous wallet", () => {
-    // The whole surface is per-customer — "set default" and "remove" act
+    // The whole surface is per-customer: "set default" and "remove" act
     // on whichever customer the iframe was initialised with. Leaving
     // `customerId` out of the mount effect's deps left the *previous*
     // customer's cards on screen with live mandate actions attached.
@@ -221,5 +241,178 @@ describe("OneShotPaymentElement", () => {
       </BillKitProvider>,
     );
     expect(typeof ref.current?.submit).toBe("function");
+  });
+});
+
+/** Announce ready from the element's iframe, as js.billkit.eu does. */
+function announceReady(el: HTMLIFrameElement | null): void {
+  window.dispatchEvent(
+    new MessageEvent("message", {
+      data: { type: "billkit:ready", protocol: 1 },
+      origin: "https://js.billkit.eu",
+      source: el?.contentWindow,
+    }),
+  );
+}
+
+describe("1.0 additions", () => {
+  it("names every element in the outside-a-provider error", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const element of [
+      <CheckoutElement clientSecret="bkcs_test_x" />,
+      <OneShotPaymentElement clientSecret="osp_test_x_secret_y" />,
+      <PaymentMethodElement clientSecret="bkcs_test_x" />,
+    ]) {
+      expect(() => render(element)).toThrow(
+        /<CheckoutElement\/>, <OneShotPaymentElement\/> and <PaymentMethodElement\/> must be rendered inside a <BillKitProvider>/,
+      );
+    }
+    spy.mockRestore();
+  });
+
+  it.each([
+    ["CheckoutElement", (title?: string) => <CheckoutElement clientSecret="bkcs_test_x" title={title} />],
+    ["OneShotPaymentElement", (title?: string) => <OneShotPaymentElement clientSecret="osp_test_x_secret_y" title={title} />],
+    ["PaymentMethodElement", (title?: string) => <PaymentMethodElement clientSecret="bkcs_test_x" title={title} />],
+  ])("%s forwards title to the iframe's accessible name", (_name, make) => {
+    const { container } = render(<BillKitProvider>{make("Sicher bezahlen")}</BillKitProvider>);
+    expect(iframe(container)?.title).toBe("Sicher bezahlen");
+  });
+
+  it("keeps the per-element default title when none is given", () => {
+    const { container } = render(
+      <BillKitProvider>
+        <CheckoutElement clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+    expect(iframe(container)?.title).toBe("BillKit secure checkout");
+  });
+
+  it("exposes focus() on the checkout ref, posted once the element is ready", () => {
+    const ref = createRef<BillKitElementRef>();
+    const { container } = render(
+      <BillKitProvider>
+        <CheckoutElement ref={ref} clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
+    announceReady(el);
+    ref.current?.focus();
+    expect(post).toHaveBeenCalledWith({ type: "billkit:focus" }, "https://js.billkit.eu");
+  });
+
+  it("exposes focus() on the payment-method ref too, which has no submit()", () => {
+    const ref = createRef<ThemeableElementRef>();
+    const { container } = render(
+      <BillKitProvider>
+        <PaymentMethodElement ref={ref} clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
+    announceReady(el);
+    ref.current?.focus();
+    expect(post).toHaveBeenCalledWith({ type: "billkit:focus" }, "https://js.billkit.eu");
+    expect("submit" in (ref.current as object)).toBe(false);
+  });
+
+  it("mounts the payment-method element without a customerId", () => {
+    const { container } = render(
+      <BillKitProvider>
+        <PaymentMethodElement clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    expect(el?.src).toBe("https://js.billkit.eu/methods");
+    const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
+    announceReady(el);
+    const init = post.mock.calls[0]![0] as Record<string, unknown>;
+    expect(init).toMatchObject({ type: "billkit:init", element: "payment-method", protocol: 1 });
+    expect("customerId" in init).toBe(false);
+  });
+});
+
+describe("theme and callbacks across renders", () => {
+  it("clears a removed theme instead of leaving the old tokens painted", () => {
+    const { container, rerender } = render(
+      <BillKitProvider>
+        <CheckoutElement clientSecret="bkcs_test_x" theme={{ colorPrimary: "#0f766e" }} />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    announceReady(el);
+    const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
+
+    rerender(
+      <BillKitProvider>
+        <CheckoutElement clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+
+    expect(iframe(container)).toBe(el);
+    expect(post).toHaveBeenCalledWith({ type: "billkit:theme", theme: {} }, "https://js.billkit.eu");
+  });
+
+  it("sends no reset when there was never a theme to clear", () => {
+    const { container, rerender } = render(
+      <BillKitProvider>
+        <CheckoutElement clientSecret="bkcs_test_x" />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    announceReady(el);
+    const post = vi.spyOn(el?.contentWindow as Window, "postMessage");
+
+    rerender(
+      <BillKitProvider>
+        <CheckoutElement clientSecret="bkcs_test_x" onReady={() => {}} />
+      </BillKitProvider>,
+    );
+
+    expect(post).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "billkit:theme" }),
+      expect.anything(),
+    );
+  });
+
+  it("keeps the committed callback when React throws a render away", async () => {
+    // A transition whose sibling suspends is rendered and then discarded:
+    // the page keeps showing the committed tree. Callbacks written to the
+    // ref during that render used to reach the live element anyway.
+    const never = new Promise<never>(() => {});
+    function Suspends(): never {
+      throw never;
+    }
+    const committed = vi.fn();
+    const discarded = vi.fn();
+    const tree = (onChange: () => void, suspend: boolean) => (
+      <BillKitProvider>
+        <Suspense fallback={<p>loading</p>}>
+          <CheckoutElement clientSecret="bkcs_test_x" onChange={onChange} />
+          {suspend ? <Suspends /> : null}
+        </Suspense>
+      </BillKitProvider>
+    );
+    const { container, rerender } = render(tree(committed, false));
+    const el = iframe(container);
+
+    await act(async () => {
+      startTransition(() => rerender(tree(discarded, true)));
+    });
+
+    // Still the committed tree: same iframe, no fallback.
+    expect(iframe(container)).toBe(el);
+    expect(container.textContent).not.toContain("loading");
+    announceReady(el);
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "billkit:change", complete: true, payment_method: "creditcard" },
+        origin: "https://js.billkit.eu",
+        source: el?.contentWindow,
+      }),
+    );
+    expect(discarded).not.toHaveBeenCalled();
+    expect(committed).toHaveBeenCalledTimes(1);
   });
 });

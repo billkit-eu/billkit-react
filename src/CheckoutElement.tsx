@@ -25,8 +25,8 @@ export type CheckoutElementProps = ReactElementProps;
  * ```
  *
  * Driving your own pay button: take a `ref` and call `submit()`. Gate the
- * button on `onChange`'s `complete`, and re-enable it from `onError` —
- * a declined card fires `onError({ code: "payment_declined" })` and the
+ * button on `onChange`'s `complete`, and re-enable it from `onError`,
+ * because a declined card fires `onError({ code: "payment_declined" })` and the
  * element shows its own retry panel.
  *
  * ```tsx
@@ -45,12 +45,12 @@ export type CheckoutElementProps = ReactElementProps;
  */
 export const CheckoutElement = forwardRef<BillKitElementRef, CheckoutElementProps>(
   function CheckoutElement(props, ref) {
-    const { isClient, containerRef, handleRef } = useElement(mountCheckoutElement, props);
+    const { shouldRender, containerRef, handleRef } = useElement(mountCheckoutElement, props);
     // No dependency list: `handleRef` is a stable ref object, and the
     // closures read `.current` at call time, so the imperative handle
     // never goes stale across remounts.
     useImperativeHandle(ref, () => checkoutElementRef(handleRef), []);
-    if (!isClient) return null;
+    if (!shouldRender) return null;
     return <div ref={containerRef} className={props.className} style={props.style} />;
   },
 );

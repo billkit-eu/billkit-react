@@ -13,7 +13,9 @@ npm install @billkit-eu/react @billkit-eu/js
 # or pnpm add @billkit-eu/react @billkit-eu/js
 ```
 
-`@billkit-eu/js`, `react` (18+) and `react-dom` (18+) are peer dependencies, so install `@billkit-eu/js` alongside this package.
+`@billkit-eu/js` (1.x), `react` and `react-dom` (18 or 19) are peer dependencies, so install `@billkit-eu/js` alongside this package. Both React majors are tested on every change.
+
+Follows semantic versioning from 1.0.0. Coming from 0.x, see [Upgrading from 0.x](#upgrading-from-0x).
 
 ## Quick start
 
@@ -44,14 +46,14 @@ No credential goes on the provider. The element authenticates with the `client_s
 import { BillKitProvider, PaymentMethodElement } from "@billkit-eu/react";
 
 <BillKitProvider>
-  <PaymentMethodElement clientSecret={clientSecret} customerId="cus_123" />
+  <PaymentMethodElement clientSecret={clientSecret} />
 </BillKitProvider>;
 ```
 
 ## One-off payments
 
 For a single charge with no subscription and no saved mandate, create the
-one-shot on your server with `ui_mode: "embedded"` (and no `method`; the buyer
+one-shot on your server with `ui_mode: "embedded"` (and no `payment_method`; the buyer
 picks it), then render its `client_secret`:
 
 ```tsx
@@ -73,9 +75,17 @@ one-shot and pass its secret, which remounts the element, to let the buyer try
 again. Redirect methods return the buyer to your `success_url`, and the
 `one_shot_payment.succeeded` webhook is the record of the money.
 
+Two one-shot `onError` codes describe a payment that may have been charged, so
+never create a new one-shot on them alone: `client_secret_expired` (the secret
+lapsed 30 minutes after the create, and the element can no longer show the
+payment, which may be paid or a bank transfer still in flight; retrieve it
+server-side or wait for its webhook) and `payment_refunded`. `payment_not_open`
+is the one that means nothing was charged. The full list is in
+the `@billkit-eu/js` README's error-code table.
+
 ## Server rendering
 
-All three components are SSR-safe. They render `null` on the server and on the first client render, then mount the iframe after hydration, so there is no hydration mismatch and no `window` access during render. Next.js App Router, Remix and Astro islands all work without a `dynamic(..., { ssr: false })` wrapper.
+All three components are SSR-safe. They render `null` on the server and on the first client render, then mount the iframe after hydration, so there is no hydration mismatch and no `window` access during render. Next.js App Router, Remix and Astro islands all work without a `dynamic(..., { ssr: false })` wrapper. The bundles carry a `"use client"` directive, so the App Router treats them as client components and you can import them straight into a server component.
 
 ## Props
 
@@ -83,19 +93,20 @@ All three components are SSR-safe. They render `null` on the server and on the f
 
 | Prop | Type | Notes |
 |---|---|---|
-| `clientSecret` | `string` | Required. From `POST /v1/checkout/sessions` (or `POST /v1/checkout/one_shot` for `<OneShotPaymentElement/>`) with `ui_mode: "embedded"`. |
+| `clientSecret` | `string` | Required. From `POST /v1/checkout/sessions` (or `POST /v1/checkout/one_shot` for `<OneShotPaymentElement/>`) with `ui_mode: "embedded"`. An empty string renders nothing, so you can render the element while the secret is still loading; it mounts when the secret arrives. |
 | `theme` | `BillKitThemeTokens` | Colour, radius, font and spacing tokens. |
 | `locale` | `string` | BCP-47, for example `"nl"`. Defaults to the customer's browser. |
+| `title` | `string` | The iframe's accessible name. Defaults per element, in English; this string lives on your page, so `locale` cannot reach it. |
 | `loadTimeoutMs` | `number` | Before `onError({ code: "load_timeout" })`. Default `20000`; `0` disables it. |
 | `logger` | `BillKitElementLogger` | Overrides the provider's logger for this element only. |
 | `className` / `style` | | Applied to the container `<div>` the iframe mounts into. |
 | `onReady` | `() => void` | The iframe booted and loaded the session. |
 | `onChange` | `(e: ChangeEvent) => void` | `e.complete` drives an external pay button. |
 | `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. `OneShotSuccessEvent` (`{ oneShotPaymentId, paymentStatus }`) on `<OneShotPaymentElement/>`. |
-| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Codes: `payment_declined`, `element_crashed`, `load_timeout`, `unsafe_redirect`. All four end the attempt. |
+| `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Every code ends the attempt; see the `@billkit-eu/js` README's error-code table for the list. |
 | `onRedirect` | `(url: string) => boolean \| void` | Before the top window navigates for 3DS or iDEAL. Return `false` to navigate yourself. |
 
-`<PaymentMethodElement/>` also requires `customerId`.
+`<PaymentMethodElement/>` also accepts `customerId`, which is optional: the `client_secret` already names the customer.
 
 `<BillKitProvider>` accepts `iframeOrigin`, `apiBase` and `logger`, applied to every element beneath it.
 
@@ -103,11 +114,11 @@ All three components are SSR-safe. They render `null` on the server and on the f
 
 Pass inline arrow functions freely. Callbacks are read through a ref at event time, so a fresh closure on every render does not tear down a live payment iframe. The same holds for `logger`: an inline `logger={{...}}`, or switching one on mid-session, never triggers a remount.
 
-Only `clientSecret`, `customerId`, `locale` and the origin overrides remount the element. That is deliberate, because a remount destroys an in-progress payment — but `customerId` has to be in that list: the wallet's "set default" and "remove" actions act on whichever customer the iframe was initialised with, so a stale frame would point them at the wrong person.
+Only `clientSecret`, `customerId` (when passed), `locale`, `title` and the origin overrides remount the element. That is deliberate, because a remount destroys an in-progress payment.
 
 ## Your own pay button
 
-Take a `ref` and call `submit()`. Gate the button on `onChange`'s `complete`, and re-enable it from `onError` — a declined card fires `onError({ code: "payment_declined" })` while the element shows its own retry panel, so it is the only signal that the attempt is over.
+Take a `ref` and call `submit()`. Gate the button on `onChange`'s `complete`, and re-enable it from `onError`, because a declined card fires `onError({ code: "payment_declined" })` while the element shows its own retry panel, so it is the only signal that the attempt is over.
 
 ```tsx
 import { useRef, useState } from "react";
@@ -141,9 +152,9 @@ function Checkout({ clientSecret }: { clientSecret: string }) {
 }
 ```
 
-The ref also exposes `updateTheme(tokens)` for imperative restyling; the declarative `theme` prop is hot-applied without a remount and is usually what you want.
+The ref also exposes `focus()`, which moves keyboard focus into the element for a page that reveals it in a later step (a call before the element has booted is dropped), and `updateTheme(tokens)` for imperative restyling; the declarative `theme` prop is hot-applied without a remount and is usually what you want. Setting it back to `undefined` returns the element to its default look.
 
-`<PaymentMethodElement/>`'s ref exposes `updateTheme()` only — that element has no form to submit; its actions are per-row buttons inside the iframe.
+`<PaymentMethodElement/>`'s ref exposes `focus()` and `updateTheme()` and no `submit()`: that element has no form to submit; its actions are per-row buttons inside the iframe.
 
 ## Content Security Policy
 
@@ -169,7 +180,7 @@ Never logged: the `clientSecret`, message payloads, or full redirect URLs. Only 
 
 The shapes line up, with one difference worth calling out.
 
-There is **no `publishableKey`**. BillKit has no publishable-key concept; the API only mints secret keys (`bk_live_...` / `bk_test_...`), which must never reach a browser. Elements authenticate with the ephemeral `client_secret` your server gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"` — `<BillKitProvider>` takes no credential at all.
+There is **no `publishableKey`**. BillKit has no publishable-key concept; the API only mints secret keys (`bk_live_...` / `bk_test_...`), which must never reach a browser. Elements authenticate with the ephemeral `client_secret` your server gets from `POST /v1/checkout/sessions` with `ui_mode: "embedded"`; `<BillKitProvider>` takes no credential at all.
 
 See the [migration guide](https://docs.billkit.eu/migration/elements/) for the full comparison.
 
@@ -184,10 +195,20 @@ import type {
   SuccessEvent,
   OneShotSuccessEvent, // <OneShotPaymentElement/>'s onSuccess payload
   BillKitElementError,
-  BillKitElementRef, // the imperative handle: { submit, updateTheme }
-  ThemeableElementRef, // <PaymentMethodElement/>'s: { updateTheme }
+  BillKitElementRef, // the imperative handle: { submit, focus, updateTheme }
+  ThemeableElementRef, // <PaymentMethodElement/>'s: { focus, updateTheme }
 } from "@billkit-eu/react";
 ```
+
+## Upgrading from 0.x
+
+1.0 is a deliberate break; [`CHANGELOG.md`](./CHANGELOG.md) has every change. In short:
+
+- Peer ranges are `@billkit-eu/js` `^1.0.0` and `react` / `react-dom` `^18 || ^19`.
+- `customerId` on `<PaymentMethodElement/>` is optional.
+- New: the `title` prop and `focus()` on every ref.
+- The outside-a-provider error names all three elements.
+- The `@billkit-eu/js` 1.0 changes apply too, since its types are re-exported here.
 
 ## Links
 

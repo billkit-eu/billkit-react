@@ -1,6 +1,6 @@
 {
   "name": "@billkit-eu/react",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "React bindings for BillKit's embedded checkout: <BillKitProvider> + <CheckoutElement/>, @stripe/react-stripe-js-shaped and SSR-safe.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,16 +8,23 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src",
     "README.md",
     "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "scripts": {
@@ -26,10 +33,11 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests",
-    "prepublishOnly": "npm run build && npm run test && npm run typecheck"
+    "check:package": "npm run build && publint --strict && attw --pack . && node scripts/check-exports.mjs",
+    "prepublishOnly": "npm run build && npm run test && npm run typecheck && publint --strict && npm_config_dry_run=false attw --pack . && node scripts/check-exports.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "keywords": [
     "billkit",
@@ -55,12 +63,13 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@billkit-eu/js": ">=0.4.0 <1",
-    "react": ">=18",
-    "react-dom": ">=18"
+    "@billkit-eu/js": "^1.0.0",
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
   },
   "devDependencies": {
-    "@billkit-eu/js": ">=0.4.0 <1",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@billkit-eu/js": "^1.0.0",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^26.1.1",
     "@types/react": "^19.3.0",
@@ -69,6 +78,7 @@
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^10.7.0",
     "jsdom": "^25.0.1",
+    "publint": "^0.3.25",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tsup": "^8.3.5",

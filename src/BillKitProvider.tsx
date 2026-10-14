@@ -3,7 +3,7 @@ import { createContext, type ReactElement, type ReactNode, useContext, useMemo }
 
 /**
  * Config shared by every BillKit element on the page. Mirrors
- * `@stripe/react-stripe-js`'s `<Elements>` provider — minus the key:
+ * `@stripe/react-stripe-js`'s `<Elements>` provider, minus the key:
  * BillKit has no publishable-key concept. The API only mints secret keys
  * (`bk_live_...` / `bk_test_...`), which must never reach a browser;
  * elements authenticate with the ephemeral `client_secret` your server
@@ -68,7 +68,8 @@ export function useBillKit(): BillKitContextValue {
   const ctx = useContext(BillKitContext);
   if (ctx === null) {
     throw new Error(
-      "BillKit: a <CheckoutElement/> must be rendered inside a <BillKitProvider>.",
+      "BillKit: <CheckoutElement/>, <OneShotPaymentElement/> and <PaymentMethodElement/> " +
+        "must be rendered inside a <BillKitProvider>.",
     );
   }
   return ctx;

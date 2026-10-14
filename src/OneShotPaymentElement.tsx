@@ -35,12 +35,12 @@ export type OneShotPaymentElementProps = ElementPropsBase<OneShotSuccessEvent>;
  */
 export const OneShotPaymentElement = forwardRef<BillKitElementRef, OneShotPaymentElementProps>(
   function OneShotPaymentElement(props, ref) {
-    const { isClient, containerRef, handleRef } = useElement<OneShotSuccessEvent>(
+    const { shouldRender, containerRef, handleRef } = useElement<OneShotSuccessEvent>(
       mountOneShotPaymentElement,
       props,
     );
     useImperativeHandle(ref, () => checkoutElementRef(handleRef), []);
-    if (!isClient) return null;
+    if (!shouldRender) return null;
     return <div ref={containerRef} className={props.className} style={props.style} />;
   },
 );
