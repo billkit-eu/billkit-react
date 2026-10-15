@@ -1,6 +1,6 @@
 {
   "name": "@billkit-eu/react",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "React bindings for BillKit's embedded checkout: <BillKitProvider> + <CheckoutElement/>, @stripe/react-stripe-js-shaped and SSR-safe.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -63,13 +63,13 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@billkit-eu/js": "^1.0.0",
+    "@billkit-eu/js": "^1.1.0",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@billkit-eu/js": "^1.0.0",
+    "@billkit-eu/js": "^1.1.0",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^26.1.1",
     "@types/react": "^19.3.0",

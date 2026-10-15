@@ -102,6 +102,8 @@ All three components are SSR-safe. They render `null` on the server and on the f
 | `className` / `style` | | Applied to the container `<div>` the iframe mounts into. |
 | `onReady` | `() => void` | The iframe booted and loaded the session. |
 | `onChange` | `(e: ChangeEvent) => void` | `e.complete` drives an external pay button. |
+| `onProcessing` | `(e: ProcessingEvent) => void` | `e.processing` is true while a payment is in flight. Hold a modal's close meanwhile. Since 1.1. |
+| `onEscape` | `() => void` | Escape was pressed inside the element. Since 1.1. |
 | `onSuccess` | `(e: SuccessEvent) => void` | Terminal success with no redirect. `OneShotSuccessEvent` (`{ oneShotPaymentId, paymentStatus }`) on `<OneShotPaymentElement/>`. |
 | `onError` | `(e: BillKitElementError) => void` | Any element or payment error. Every code ends the attempt; see the `@billkit-eu/js` README's error-code table for the list. |
 | `onRedirect` | `(url: string) => boolean \| void` | Before the top window navigates for 3DS or iDEAL. Return `false` to navigate yourself. |

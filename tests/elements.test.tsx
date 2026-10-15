@@ -233,6 +233,41 @@ describe("OneShotPaymentElement", () => {
     expect(latest).toHaveBeenCalledWith({ oneShotPaymentId: "osp_test_x", paymentStatus: "paid" });
   });
 
+  it("forwards processing and Escape to the latest callbacks", () => {
+    const stale = vi.fn();
+    const onProcessing = vi.fn();
+    const onEscape = vi.fn();
+    const { container, rerender } = render(
+      <BillKitProvider>
+        <OneShotPaymentElement clientSecret="osp_test_x_secret_y" onProcessing={stale} />
+      </BillKitProvider>,
+    );
+    rerender(
+      <BillKitProvider>
+        <OneShotPaymentElement
+          clientSecret="osp_test_x_secret_y"
+          onProcessing={onProcessing}
+          onEscape={onEscape}
+        />
+      </BillKitProvider>,
+    );
+    const el = iframe(container);
+    const send = (data: unknown) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data,
+          origin: "https://js.billkit.eu",
+          source: el?.contentWindow ?? null,
+        }),
+      );
+    send({ type: "billkit:processing", active: true });
+    send({ type: "billkit:escape" });
+    send({ type: "billkit:processing", active: false });
+    expect(stale).not.toHaveBeenCalled();
+    expect(onProcessing.mock.calls).toEqual([[{ processing: true }], [{ processing: false }]]);
+    expect(onEscape).toHaveBeenCalledOnce();
+  });
+
   it("exposes submit() through a ref", () => {
     const ref = createRef<BillKitElementRef>();
     render(

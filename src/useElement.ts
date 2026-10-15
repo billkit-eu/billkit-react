@@ -5,6 +5,7 @@ import type {
   BillKitElementLogger,
   BillKitThemeTokens,
   ChangeEvent,
+  ProcessingEvent,
   SuccessEvent,
 } from "@billkit-eu/js";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -44,6 +45,14 @@ export interface ElementPropsBase<S> {
   style?: React.CSSProperties;
   onReady?: () => void;
   onChange?: (event: ChangeEvent) => void;
+  /**
+   * A payment started, or stopped being in flight. Hold whatever would tear
+   * the form down mid-payment (a modal's close) while `processing` is true.
+   * See `onProcessing` in `@billkit-eu/js`.
+   */
+  onProcessing?: (event: ProcessingEvent) => void;
+  /** Escape was pressed inside the element, which your page cannot hear on its own. */
+  onEscape?: () => void;
   onSuccess?: (event: S) => void;
   onError?: (error: BillKitElementError) => void;
   onRedirect?: (url: string) => boolean | void;
@@ -156,6 +165,8 @@ export function useElement<S = SuccessEvent>(
       logger: stableLogger,
       onReady: () => callbacks.current.onReady?.(),
       onChange: (e) => callbacks.current.onChange?.(e),
+      onProcessing: (e) => callbacks.current.onProcessing?.(e),
+      onEscape: () => callbacks.current.onEscape?.(),
       onSuccess: (e) => callbacks.current.onSuccess?.(e),
       onError: (e) => callbacks.current.onError?.(e),
       onRedirect: (url) => callbacks.current.onRedirect?.(url),

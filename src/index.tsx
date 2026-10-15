@@ -40,5 +40,6 @@ export type {
   ChangeEvent,
   ElementLogContext,
   OneShotSuccessEvent,
+  ProcessingEvent,
   SuccessEvent,
 } from "@billkit-eu/js";

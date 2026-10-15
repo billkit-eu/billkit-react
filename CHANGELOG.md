@@ -9,6 +9,13 @@ This package is a thin binding layer over `@billkit-eu/js`, which it takes as a
 peer dependency. Behaviour changes usually land there and are recorded in that
 package's changelog.
 
+## [1.1.0] - 2026-10-15
+
+### Added
+- `onProcessing` and `onEscape` props on every element, and the
+  `ProcessingEvent` type, from `@billkit-eu/js` 1.1.0. The peer dependency is
+  now `^1.1.0`.
+
 ## [1.0.0] - 2026-10-14
 
 The first stable release, following `@billkit-eu/js` 1.0.0. From here on the
